@@ -65,13 +65,45 @@ answer is simply wrong.
 
 ## 3. The drivers that do work
 
+> **This section is provisional and stays open until sample displays are in
+> hand.** Two unknowns gate it, and neither can be settled from a catalogue:
+> the **segment forward voltage** (sources below span 7.4 V to 13 V) and
+> whether the parts available are **common anode or common cathode**. The
+> second one is not a detail — it changes the driver family entirely, because
+> every cheap cascadable LED driver is a *sink*. Once real models arrive,
+> measure both and commit properly; until then treat the choice below as the
+> leading candidate rather than the decision.
+
+### 3.0 Common anode or common cathode decides the family
+
+| Display | What the segments need | Driver family | Candidate |
+|---|---|---|---|
+| **Common anode** (anodes tied to V+) | each segment's cathode pulled **low** → a **sink** | the whole cheap cascadable world | **TPIC6B595** — 50 V, 150 mA/ch, $0.595 |
+| **Common cathode** (cathodes tied to GND) | each segment's anode pushed **high** → a **source** | far fewer parts, dearer | **MIC5891** — 8-bit serial-input *latched source* driver, sources 500 mA, sustains ≥35 V, cascades through a serial output ([Microchip, via Farnell](https://uk.farnell.com/microchip/mic5891ywm/latched-source-driver-serial-input/dp/2510409)) |
+
+The good news is that the *architecture* survives either answer: both parts are
+8-bit, serially loaded, latched and cascadable, so one driver per digit, four
+MCU pins and a six-wire chain hold regardless. Only the part number, the
+polarity of the segment nets and the board's power topology change.
+
+**So the sourcing preference is common anode**, and it should be stated to the
+supplier as a requirement rather than discovered on delivery. If only
+common-cathode stock is available, budget for MIC5891-class parts, check the
+35 V sustain against the measured V<sub>f</sub>, and note its package power
+limit — the datasheet warns that simultaneous operation at maximum current
+needs duty-cycle reduction, which matters much more for a source Darlington
+than for the DMOS sink.
+
+### 3.1 The candidates
+
 | Part | Rating | Interface | Price | Notes |
 |---|---|---|---|---|
-| **TPIC6B595** | **50 V**, 150 mA/ch, 8 ch, open-drain DMOS | Shift register, `SER IN`→`SER OUT` cascade | **$0.595** (SOIC-20, [LCSC](https://www.lcsc.com/product-detail/Registers_Texas-Instruments_C7094.html)) ≈ ₹53 | **Primary choice.** Sinks current → needs common-anode displays. Per-segment resistor sets current. [TI datasheet](https://www.ti.com/lit/ds/symlink/tpic6b595.pdf) |
+| **TPIC6B595** | **50 V**, 150 mA/ch, 8 ch, open-drain DMOS | Shift register, `SER IN`→`SER OUT` cascade | **$0.595** (SOIC-20, [LCSC](https://www.lcsc.com/product-detail/Registers_Texas-Instruments_C7094.html)) ≈ ₹53 | **Leading candidate — common anode only.** Sinks current. Per-segment resistor sets current. [TI datasheet](https://www.ti.com/lit/ds/symlink/tpic6b595.pdf) |
+| **MIC5891** | ≥35 V, sources 500 mA, 8 ch, latched Darlington source | Serial in, serial out cascade | dearer, DIP-16 / SOIC-16W | **The common-cathode fallback.** Watch the package power limit at high current. |
 | **TLC5917 / TLC5916** | 17 V, 3–120 mA constant current, 8 ch | Same cascade | similar class | No per-segment resistors; one R<sub>EXT</sub> sets all channels; uniform brightness across a V<sub>f</sub> spread. **But see the thermal note below.** |
 | HV5812 | 80 V, 20 ch | Cascade | dearer | Overkill unless the displays turn out to be 20 V+ |
 
-### The thermal argument — and why resistors win for the big digits
+### 3.2 The thermal argument — and why resistors win for the big digits
 
 This decides between the two realistic parts, and it is not obvious:
 
@@ -87,7 +119,8 @@ At the 40 mA a 4" digit may want for corridor brightness, it is hopeless.
 
 Two consequences:
 
-1. **TPIC6B595 + per-segment resistors is the primary architecture.** Cheap,
+1. **TPIC6B595 + per-segment resistors is the leading architecture** — subject
+   to the displays being common anode. Cheap,
    50 V of headroom for whatever the displays turn out to need, thermally
    relaxed, and 150 mA/ch leaves room to push brightness.
 2. **Choose the rail tight to V<sub>f</sub>** regardless of driver: `V_rail ≈
@@ -97,7 +130,11 @@ Two consequences:
 
 TLC5917 stays the right answer *if* the chosen display turns out to have a wide
 V<sub>f</sub> spread between units and the rail can sit within ~2 V of it — then
-it buys resistor-free uniform brightness.
+it buys resistor-free uniform brightness. It also becomes the preferred part on
+any dial specified with **battery backup**, because a battery rail sags from
+14.6 V to 10 V across its discharge and resistor-set segments visibly dim with
+it, where a constant-current sink holds brightness flat until it runs out of
+headroom ([`architecture.md`](architecture.md) §3a).
 
 ## 4. Static, not multiplexed
 
@@ -200,7 +237,81 @@ point channels of the neighbouring digits.
 on both edges of every digit board, so boards tile edge-to-edge in either digit
 size, and the control board can sit at either end.
 
-## 8. The alternative that was considered and rejected
+## 8. How one digit module connects to the next
+
+Six conductors leave each board and six arrive at the next. The question is what
+carries them. Before the options, the constraint that eliminates most of them:
+
+### 8.1 The trap: do not daisy-chain the power through the signal connector
+
+Chaining `SER / SRCK / RCK / OE` costs microamps. Chaining `V+` and `GND` means
+**the first connector in the line carries the whole display's current** — up to
+0.88 A for a 2.3" dial and ~1.76 A for a 4" one at 40 mA/segment
+([§6](#6-power)) — while the last carries only its own digit's share.
+
+Two consequences, and the second is the one that bites:
+
+1. **Rating.** A JST PH contact is ~2 A, XH ~3 A ⟨est — check the series
+   datasheet at temperature⟩. PH is marginal for a 4" chain; XH is fine.
+2. **A visible brightness gradient.** Each hop drops roughly
+   `I × (contact + wire resistance)`. At ~50 mΩ per hop ⟨est⟩ and 1.76 A that is
+   ~90 mV per hop, so the far digit sees ~0.4 V less rail. With per-segment
+   resistors and only ~4.6 V of headroom, 0.4 V is ~9 % less segment current —
+   **the last digits of the clock are dimmer than the first**, which is exactly
+   the kind of defect nobody notices on a bench and everybody notices on a wall.
+
+So, one of three fixes, in order of preference:
+
+- **Deliver power in parallel** — a star harness from the control board to every
+  digit board — and chain only the four logic signals plus a ground reference.
+  Costs one extra 2-pin connector per board; removes the problem entirely.
+- **Use constant-current drivers** (TLC5917), which regulate segment current
+  regardless of rail sag. Also what battery backup wants
+  ([`architecture.md`](architecture.md) §3a).
+- **Double the power contacts** and pour heavy copper, keeping the chain short.
+  Acceptable for a 2.3" dial at 20 mA; do the drop arithmetic for a 4" one.
+
+### 8.2 The options
+
+| Option | Serviceable? | Current | Cost / labour | Verdict for boreth |
+|---|---|---|---|---|
+| **JST XH (2.5 mm) wire-to-board** | Yes, keyed, many cycles | ~3 A/contact ⟨est⟩ | Cheap; needs crimped jumpers | **Recommended.** Keyed so it cannot go in backwards, widely stocked in India, one short cable per hop |
+| JST PH (2.0 mm) | Yes, keyed | ~2 A ⟨est⟩ | Cheaper, smaller | Fine for 2.3"; marginal if power is chained on a 4" |
+| **Shrouded IDC ribbon (2×3, 2.54 mm)** | Yes, keyed by the shroud | ~1 A/contact ⟨est⟩ | Cheapest at volume — ribbon + vice, no crimping | Good second choice; bulkier, and the current limit forces split power |
+| Bare 2.54 mm header + socket | Yes | ~2 A ⟨est⟩ | Cheapest parts | **Avoid unshrouded** — a reversed plug puts V+ on `OE` and kills a driver. Only with a keyed shroud |
+| **Direct header/socket mating** (board-to-board, no cable) | Yes | ~2 A ⟨est⟩ | No cable assembly at all | Elegant, but demands exact board spacing and offers zero tolerance — see "floating" below |
+| Floating board-to-board connectors | Yes | varies | Dearer | Exist precisely to absorb misalignment on repeated assembly and vibration ([Altium](https://resources.altium.com/p/complete-guide-to-selecting-board-to-board-connectors)) — worth it only if direct mating is chosen |
+| **Card edge / gold fingers + socket** | Yes, high cycle life | Pins can be paralleled for power | ENIG plating + socket; zero connector on the plug side | Spring contacts press on the board's own fingers ([Altium](https://resources.altium.com/p/complete-guide-to-selecting-board-to-board-connectors)). Needs boards to overlap or sit perpendicular, which disturbs digit pitch. Needs retention under vibration |
+| **Castellated edge pads, soldered** | **No** — permanent | Limited by the solder joint | Cheapest possible, zero parts | Rules itself out: a failed digit board should swap without a soldering iron |
+| FFC / FPC ribbon + ZIF | Re-seatable, fragile | Low, signal-grade | Cheap, no tooling | Very low profile, but too little current for the power rail and too fragile for a serviceable wall unit |
+| Pogo pins + target pads | Excellent cycle life | ~1–3 A/contact ⟨est⟩ | Needs precise mechanics and constant pressure | Attractive for a tiled wall product where digits drop into a frame. Over-engineering for v1 |
+| Lever terminals (WAGO 2060 class) | Yes, tool-free in the field | High | Bulky | Over-sized for six 24 AWG conductors |
+| **Backplane / spine PCB** | Yes — digits plug in | Good; wide copper for power | One long board, >100 mm → fab tier bump | **The dark-horse option.** Removes every cable assembly and solves the power-gradient problem with copper. Revisit if assembly labour dominates |
+| Rigid-flex (digits on rigid islands, flex between) | No | Fine | Expensive at low volume | The elegant answer at 1,000 units, not at 10 |
+| Soldered wire links | No | Whatever the wire is | Free | Fine for the first prototype. Not a product |
+
+### 8.3 What to build first
+
+**Prototype:** 6-pin JST XH chain, back-mounted. One part number, keyed, in
+every Indian catalogue, and it makes a failed digit board a 20-second swap.
+
+**If a 4" dial or battery backup is in scope:** split the rail out — a 4-pin XH
+signal chain plus a separate 2-pin power feed per board from a parallel harness.
+
+**Mechanical notes that apply to all of them:**
+
+- Mount connectors on the **back face**, not the board edges. The displays are
+  12–15 mm deep, so there is room behind, and nothing is allowed to intrude into
+  the inter-digit gap, which is a legibility dimension rather than a free one.
+- Put the in and out connectors at the **same relative position on both edges**
+  so boards tile identically in either digit size and the control board can sit
+  at either end.
+- **Signal integrity is a non-issue if the clock is kept slow.** The whole frame
+  is 48 bits; at 1 MHz that is 48 µs, so there is no reason to run SPI fast.
+  Give `SRCK` an adjacent ground in the connector pinout and put ~100 Ω in
+  series at the source if the chain is long.
+
+## 9. The alternative that was considered and rejected
 
 Large clocks are often built from **addressable LED strip** (WS2812B/SK6812),
 2–4 LEDs per segment. It is tempting: one data wire, any digit height, any
@@ -212,7 +323,7 @@ poor readability in daylight, and an invitation to colour effects that a clock
 on an institutional wall should not have. Worth re-opening only if sourcing
 moulded displays in both sizes proves unreliable.
 
-## 9. Open questions — the bench tasks before any PCB
+## 10. Open questions — the bench tasks before any PCB
 
 1. **Measure V<sub>f</sub>.** Buy three 2.3" and three 4" displays from the
    intended Indian supplier and measure segment forward voltage at 20 mA and
@@ -220,11 +331,21 @@ moulded displays in both sizes proves unreliable.
    and some Indian listings state "3.3–5 V", which cannot be true for a 57 mm
    segment. **No rail voltage, resistor value or PSU can be chosen until this
    number is measured.** This is the project's first task.
-2. **Confirm common-anode availability in both sizes** from one supplier.
-   TPIC6B595 sinks, so common-cathode parts would force a different driver.
-3. **Confirm the 2.3" body dimensions** and whether a pair plus a legible gap
+2. **Establish common anode or common cathode** in both sizes, from one
+   supplier, and state it as a purchase requirement. This is the other half of
+   the gate on §3: common anode keeps the cheap TPIC6B595 sink; common cathode
+   forces a MIC5891-class source driver, a dearer part with a tighter voltage
+   and power budget. Both answers keep the architecture — one driver per digit,
+   four MCU pins, a six-wire chain — but the BOM and the board's polarity flip.
+3. **Then commit to the driver.** §3 is deliberately provisional until 1 and 2
+   are answered; it is not a question to defer indefinitely, it is one that
+   cannot be answered without parts on the bench.
+4. **Confirm the 2.3" body dimensions** and whether a pair plus a legible gap
    actually lands inside 100 mm.
-4. **Get a real fab quote** for 115 × 95 mm versus 100 × 100 mm at 5, 10 and 50
+5. **Get a real fab quote** for 115 × 95 mm versus 100 × 100 mm at 5, 10 and 50
    pieces, to price option (a) honestly.
-5. **Judge brightness by eye** at 20 mA in a lit corridor before assuming 40 mA
+6. **Judge brightness by eye** at 20 mA in a lit corridor before assuming 40 mA
    is needed — it doubles the power budget and the supply cost.
+7. **Decide the interconnect** once the board outlines are fixed — §8.3
+   recommends JST XH, but the choice between a chained rail and a parallel one
+   depends on the measured current, which depends on question 1.

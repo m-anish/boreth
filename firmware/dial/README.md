@@ -2,7 +2,9 @@
 
 Placeholder. Nothing written yet.
 
-Target: ESP32-C3 (or C6). Responsibilities, in rough order of importance:
+Target: ESP32-C3 (or C6), with ESP-NOW always and an SX1262 populated only on
+dials the survey puts out of range. Responsibilities, in rough order of
+importance:
 
 - Drive the cascaded TPIC6B595 chain over SPI + one latch line; PWM `OE` for
   brightness from the ambient sensor ([display-driving.md](../../docs/display-driving.md))

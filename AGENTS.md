@@ -6,10 +6,16 @@ boreth is a **synchronised clock system for campuses**. Two devices:
 
 - **dials** — wall clocks, six seven-segment digits (`HH:MM:SS`) at 2.3" or 4"
   digit height, mains powered, each with its own temperature-compensated RTC on
-  a coin cell.
+  a coin cell. ESP-NOW always; LoRa footprint always laid out, populated only
+  where the site needs it.
 - **the keeper** — one per building or campus. Takes real time from GNSS or NTP,
-  holds it, broadcasts a signed beacon to the dials, and hosts the admin
-  interface.
+  holds it, broadcasts a signed beacon to the dials over **both** radios, and
+  hosts the admin interface.
+
+**Battery backup is optional on every unit**, dial and keeper alike, and is not
+the same thing as the coin cell: the coin cell is standard and keeps the *clock*
+running; battery backup is an extra that keeps the *device* running — display
+lit, radio alive. Never conflate the two in any document.
 
 Named for the Klingon monastery world where monks guard the time crystals. The
 register is **monastic**: institutional patience, keeps the hour, does not
@@ -33,11 +39,17 @@ that the documents exist to rule out:
   beacons must be authenticated.
 - [`docs/display-driving.md`](docs/display-driving.md) — **MAX7219, TM1637 and
   HT16K33 cannot drive these displays.** Segments are multiple dies in series at
-  7.4–13 V. The answer is cascaded TPIC6B595 shift registers, statically driven,
-  one per digit, four MCU pins total.
+  7.4–13 V. The answer is cascaded 8-bit shift-register drivers, statically
+  driven, one per digit, four MCU pins total. **The specific driver IC is
+  provisional** — see the guardrail below. §8 covers how one digit board
+  connects to the next.
 - [`docs/radio.md`](docs/radio.md) — **HC-12 and 433 MHz LoRa are not legal in
   India at useful settings** (10 mW ERP, 10 kHz channel). 865–867 MHz under
-  G.S.R. 853(E) is the band. ESP-NOW indoors, LoRa only where needed.
+  G.S.R. 853(E) is the band. ESP-NOW is peer-to-peer and connectionless; the
+  beacon is **broadcast**, which has no peer limit (unicast caps at 20 peers)
+  and no link-layer encryption — which is why the application-layer AES-CMAC is
+  mandatory rather than belt-and-braces. Keeper fits both radios; dials fit
+  LoRa only where the survey says so.
 - [`docs/timekeeping.md`](docs/timekeeping.md) — **DS3231 over RV-3028** despite
   the worse headline ppm, because the RV-3028 has no temperature compensation.
   NTP from NPL India (`time.nplindia.org`), median of ≥3 servers.
@@ -50,10 +62,16 @@ that the documents exist to rule out:
   line and the README say so; keep it that way until something is actually
   measured. Placeholder directories and an honest `planning` badge beat invented
   specs.
-- **The forward voltage is not known yet.** Sources span 7.4 V to 13 V per
-  segment for nominally similar displays. Do not pick a rail voltage, a resistor
-  value or a power supply in any document without flagging that it depends on a
-  measurement nobody has taken.
+- **The segment driver is provisional, and that is deliberate — not an
+  oversight to tidy away.** Two unknowns gate it and neither can be resolved
+  from a catalogue: (1) forward voltage, where sources span 7.4 V to 13 V per
+  segment for nominally similar displays, and (2) **common anode vs common
+  cathode**, which changes the driver family outright — every cheap cascadable
+  LED driver is a *sink*, so common-anode keeps TPIC6B595 while common-cathode
+  forces a MIC5891-class *source* driver. Once real display models arrive,
+  measure both and commit properly. Until then, do not pick a rail voltage, a
+  resistor value or a power supply in any document without flagging the
+  dependency — and do not quietly promote the leading candidate to a decision.
 - **Mark estimates.** Prices and dimensions either carry a source link or an
   ⟨est⟩ marker. The BOM's credibility is the point of the BOM.
 - **The 10 × 10 cm PCB rule is a cost heuristic, not a law** — and the 4" display

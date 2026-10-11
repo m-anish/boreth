@@ -110,11 +110,22 @@ cut. On a dial this is the most valuable component in the build: it is why a
 clock shows the right time the instant the power returns, rather than waiting
 for a beacon.
 
+**The coin cell is standard; battery backup is a separate, optional tier.** The
+coin cell keeps the *clock* alive for pennies — nothing else. Keeping the
+*device* alive through an outage — display lit, radio listening, keeper still
+broadcasting — is an extra, available on both the dial and the keeper and
+specified per site. The keeper's version is the cheap and useful one: ~0.5–0.8 W
+means a single 18650-class cell carries it most of a day ⟨est⟩, so it is still
+disciplined and still transmitting when the dials come back. The dial's version
+has to carry the display, which is amps rather than microamps. Both are costed
+in [`architecture.md`](architecture.md) §3a and
+[`../hardware/BOM.md`](../hardware/BOM.md).
+
 ## 3. The keeper's MCU
 
 | Candidate | For | Against |
 |---|---|---|
-| **ESP32-S3** | Wi-Fi + BLE, plenty of flash and RAM for a web UI and TLS, USB for provisioning, the pattern already proven in [forsyth](https://github.com/m-anish/forsyth)'s coordinator | 2.4 GHz only |
+| **ESP32-S3** | Wi-Fi + BLE + ESP-NOW, plenty of flash and RAM for a web UI and TLS, USB for provisioning, the pattern already proven in [forsyth](https://github.com/m-anish/forsyth)'s coordinator | 2.4 GHz only — so it is paired with an SX1262 for reach ([`radio.md`](radio.md) §2b) |
 | **ESP32-C6** | Everything above plus **802.15.4** (Thread/Zigbee), and the [module is ₹199](https://aws.robu.in/product/espressif-esp32-c6-mini-1-n4-module/) | Newer toolchain; less headroom than the S3 for a web app |
 | ESP32-C3 | Cheapest ([₹279 dev board](https://robu.in/product/esp32-c3-development-board-with-soldering/)) | Tighter RAM for TLS plus a served PWA |
 | RPi Zero 2 W / Linux | chrony, real NTP, trivial web stack | Needs an SD card, a shutdown story and a filesystem that survives India's power cuts — the wrong reliability trade for a device whose job is to be up |
@@ -122,6 +133,13 @@ for a beacon.
 **Recommended: ESP32-S3 for the keeper, ESP32-C3 or C6 for the dials.** The
 keeper carries the web UI, the TLS stack and the time logic; the dials need SPI,
 I²C and a radio.
+
+Note what the keeper's MCU choice does *not* settle: it is dual-radio
+regardless. ESP-NOW comes free in the ESP32, and an SX1262 is always populated
+alongside it, because one keeper per building makes the module cost irrelevant
+against being able to reach a far dial at all. The dials are the asymmetric
+side — ESP-NOW always, LoRa only where the survey says so
+([`radio.md`](radio.md) §2b).
 
 **Add optional Ethernet (W5500 or LAN8720).** A campus IT department will far
 rather give a static IP and a wall port to a clock master than put it on Wi-Fi

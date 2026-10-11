@@ -10,13 +10,29 @@ Boreth is two products that only make sense together.
 
 **The dial** — a clock. Six seven-segment digits (`HH:MM:SS`) at 2.3" or 4"
 digit height, a colon between the pairs, mains powered, wall mounted. Contains
-its own temperature-compensated RTC on a coin cell. Shows the right time whether
-or not anything else in the system is alive.
+its own temperature-compensated RTC on a coin cell. Speaks ESP-NOW always, and
+LoRa if the site needs it. Shows the right time whether or not anything else in
+the system is alive.
 
 **The keeper** — one per building or per campus. Acquires real time from GNSS or
-the network, holds it, and broadcasts it to the dials. Hosts the admin interface.
-Nothing in the system depends on more than one keeper existing, and nothing
-breaks if one dies.
+the network, holds it, and broadcasts it to the dials over **both** radios.
+Hosts the admin interface. Nothing in the system depends on more than one keeper
+existing, and nothing breaks if one dies.
+
+Two things are **optional on every unit**, and both are decided per site rather
+than per product:
+
+| Option | On the dial | On the keeper |
+|---|---|---|
+| **LoRa** (865–867 MHz) | Footprint and header always on the board; populated only for dials out of ESP-NOW reach | **Always populated** — the keeper is one unit per building, so the module cost is noise against being able to reach a far node |
+| **Battery backup** | Keeps the *display lit* through a mains cut. Expensive, because the display is the load — see §3a | Keeps the keeper *synced and broadcasting* through a mains cut. Cheap, and the higher-value of the two |
+
+**Battery backup is not the coin cell, and the two solve different problems.**
+The coin cell is standard on every unit and keeps the *clock running* for
+pennies; the dial wakes up already correct. Battery backup is an extra that
+keeps the *device operating* — the display lit, the radio alive — while the
+mains is out. A dial without battery backup is dark but right; a dial with it
+carries on telling the hall what time it is.
 
 The vocabulary matters for the protocol later: a dial is `synced` when it has
 heard a fresh beacon, in `vigil` when it is running on its own corrected RTC,
@@ -28,17 +44,22 @@ to vouch for itself.
               \                 |                      /
                \                |                     /
                 +------------ keeper -----------------+
-                           (DS3231 TCXO,
-                            disciplined)
+                        (DS3231 TCXO, disciplined)
+                        (ESP-NOW + LoRa, both fitted)
+                        (optional battery backup)
                                 |
-                     signed time beacon, ~60 s
-                     ESP-NOW (indoor) / LoRa 865–867 (site)
+                    signed time beacon, ~60 s
                                 |
-            +-------------+-----+-----+-------------+
-            |             |           |             |
-          dial          dial        dial          dial
-        (own RTC)     (own RTC)   (own RTC)     (own RTC)
+              +--------- ESP-NOW ---------+        LoRa 865–867
+              |            |              |              |
+            dial         dial           dial          dial
+          (own RTC)    (own RTC)      (own RTC)    (own RTC + LoRa)
+           in range     in range       in range     far outbuilding
+                                                    gate · field · block
 ```
+
+Every dial runs the same board. The three on ESP-NOW simply have their LoRa
+footprint unpopulated.
 
 This is deliberately the NTP stratum model: one disciplined source, many clients
 that each hold their own oscillator and correct it, nobody trusting the network
@@ -119,13 +140,52 @@ an Indian campus building:
 
 | # | Failure | What happens | Design requirement |
 |---|---|---|---|
-| 1 | **Mains cut** (routine, daily in much of India) | Display goes dark. RTC keeps running on its coin cell. On power restore the dial shows correct time **immediately**, without waiting for a beacon or a network. | Coin cell on every dial's RTC. This is the single most important failsafe and the reason the per-dial RTC in the brief is right. A DS3231 keeps time at ~0.84 µA from a CR2032 — years. |
+| 1 | **Mains cut** (routine, daily in much of India) | Display goes dark. RTC keeps running on its coin cell. On power restore the dial shows correct time **immediately**, without waiting for a beacon or a network. *With the optional battery backup, the display does not go dark at all.* | Coin cell on every dial's RTC. This is the single most important failsafe and the reason the per-dial RTC in the brief is right. A DS3231 keeps time at ~0.84 µA from a CR2032 — years. Battery backup is the optional tier above it, costed in §3a. |
 | 2 | **Keeper loses internet** | Keeper enters holdover on its own TCXO, keeps broadcasting, marks the beacon `source=holdover` so dials know the chain is degraded. Dials unaffected for days. | Keeper must broadcast its own trust level, not just the time. |
 | 3 | **Dial loses radio** | Enters `vigil`: runs on its rate-corrected RTC. Still correct to well under a second for a week. | Dial must never blank or show an error because the radio is quiet. |
 | 4 | **Keeper dies completely** | Every dial runs in `vigil`. The campus degrades to "all clocks drift together, slowly" — which is what an unsynchronised clock estate does anyway, except these started from the right time and know their own rate. | No single point of *failure*, only a single point of *correction*. |
 | 5 | **Two keepers disagree** | Dials prefer the beacon with the better source (GNSS > NTP > holdover), then the freshest sequence, then the lowest keeper ID, **with hysteresis** so a dial on the boundary doesn't oscillate between two keepers every minute. | Deterministic tie-break, written down, with hysteresis. |
 | 6 | **Forged or replayed beacon** | Rejected. Every beacon is authenticated and carries a monotonic sequence number. | See below — this is not optional. |
 | 7 | **Display driver or digit fails** | One digit dark; the rest keep working, because each digit is an independent driver on a cascaded bus. A dead digit board can be swapped without touching the others. | Per-digit driver, per-digit board. |
+
+### 3a. Battery backup — optional, and worth it in different amounts
+
+Optional on every unit, and the arithmetic is lopsided enough that it should
+usually be specified differently for the two.
+
+**On the keeper: cheap, and the high-value one.** An ESP32-S3 with GNSS draws
+roughly 0.5–0.8 W; the LoRa transmit burst is ~185 ms a minute and averages to
+nothing. A single 18650-class cell (≈11 Wh) therefore runs a keeper for most of
+a day ⟨est⟩. That matters out of proportion to its cost: a keeper that rides out
+the outage is still disciplined and still broadcasting when the dials come back,
+so the estate re-converges immediately instead of drifting until the next
+upstream sync.
+
+**On the dial: expensive, because the display is the load.** Timekeeping costs
+microamps; lighting 31 segments costs amps. At the typical currents in
+[`display-driving.md`](display-driving.md) §6:
+
+| Dial | Load | 4S LiFePO₄, ≈33 Wh ⟨est⟩ | Dimmed to 10 % via `OE` PWM |
+|---|---|---|---|
+| 2.3" @ 20 mA/seg | ≈7.4 W | ≈4.5 h | ≈24 h |
+| 4" @ 40 mA/seg | ≈18.6 W | ≈1.8 h | ≈13 h |
+
+So the design rule, if a site buys it: **drop brightness on battery.** A clock
+running at a tenth of its brightness is perfectly readable in a building whose
+lights are off anyway, and it turns two hours into most of a day.
+
+Two consequences worth carrying into the hardware:
+
+- **Chemistry.** 4S LiFePO₄ (12.8 V nominal) sits naturally on a 12 V display
+  rail, has the cycle life for daily Indian outages, and is what
+  [forsyth](https://github.com/m-anish/forsyth) already uses. A 12 V SLA is
+  cheaper still and tolerant of abuse, at the cost of weight and cycle life.
+- **It argues for constant-current segment drive.** A battery rail wanders from
+  14.6 V down to 10 V across its discharge. With per-segment resistors the
+  display visibly dims as the battery sags; a constant-current driver holds
+  brightness flat until it runs out of headroom. If battery backup is specified
+  for a site, that moves TLC5917 from "option" to "preferred" — see
+  [`display-driving.md`](display-driving.md) §3.
 
 ### On authentication
 

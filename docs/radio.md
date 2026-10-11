@@ -84,17 +84,74 @@ Prefer an **SPI** module (Ra-01SH, E22-900M22S) over a **UART** one
 that §4 needs, where a UART module hides it behind the same kind of buffering
 that disqualified HC-12.
 
+## 2a. Is ESP-NOW peer-to-peer?
+
+**Yes, and in the strongest sense: it is connectionless.** There is no access
+point, no association, no DHCP, no IP stack. A device sends a vendor-specific
+802.11 action frame straight to another device's MAC address, and the other
+device's callback fires. Two ESP32s with no network between them talk
+immediately.
+
+Three properties of it decide boreth's design:
+
+**1. Broadcast has no peer limit, and boreth is broadcast-only.** Unicast
+ESP-NOW is capped at **20 paired peers**, with encrypted peers capped lower
+still — fixed at 6 before ESP-IDF v5.1, and configurable since, defaulting to 7
+with a maximum of 17. A campus of 400 dials would blow through that instantly.
+But sending to the broadcast address `FF:FF:FF:FF:FF:FF` requires **no pairing
+at all**, and [Espressif's ESP-NOW FAQ](https://docs.espressif.com/projects/espressif-esp-faq/en/latest/application-solution/esp-now.html)
+states that with broadcast there is theoretically no limit on the number of
+receiving devices. (Espressif's 2016 user guide lists broadcast as
+unsupported — that document is out of date on this point; check against the
+current FAQ and the IDF version in use.) Since the keeper
+broadcasts and the dials never reply ([§5](#5-the-beacon)), the peer cap simply
+does not apply, and airtime does not grow with clock count.
+
+**2. Broadcast is unencrypted — which costs us nothing, because we already sign
+the beacon.** ESP-NOW's CCMP encryption only applies to paired unicast peers.
+The application-layer AES-CMAC in [`architecture.md`](architecture.md) §3 was
+required anyway (the beacon must be authenticated over LoRa too, which has no
+link-layer security at all), so one authentication scheme covers both radios.
+Had we relied on link-layer crypto we would have needed pairing, and the peer
+cap would have come back.
+
+**3. The payload is ample.** ESP-NOW v1 carries 250 bytes; v2 carries 1470
+([FAQ](https://docs.espressif.com/projects/espressif-esp-faq/en/latest/application-solution/esp-now.html)).
+The beacon is about 20 bytes.
+
+Range is the one thing it will not give: roughly 40–100 m through building
+walls, with ESP-NOW's proprietary **Long Range mode** reaching beyond 900 m in
+open field at reduced data rate and still under 25 ms of latency. Good for a
+building. Not good for a gatehouse across a campus — which is what the second
+radio is for.
+
+## 2b. What that means for the hardware
+
+The two devices are **deliberately asymmetric**, and the asymmetry is a cost
+decision rather than a technical one:
+
+| | ESP-NOW | LoRa (SX1262, 865–867 MHz) |
+|---|---|---|
+| **Keeper** | Always — it is in the MCU | **Always populated.** One keeper serves a whole building, so ₹320–850 is noise against being able to reach an outbuilding at all |
+| **Dial** | Always — it is in the MCU | **Footprint and 6-pin header always laid out; module populated only where the site survey demands it** |
+
+So the keeper is dual-radio by default and transmits the same signed beacon on
+both interfaces; a dial listens on whichever radio it has. One dial board
+design, two build options, and the decision is made with a signal-strength
+reading at install time rather than at design time.
+
+The alternative — LoRa in all 40 dials — costs ₹13,000–34,000 per campus for
+range that most of those dials, sitting one floor from the keeper, will never
+use.
+
 ## 3. The recommendation: the time bus is a role, not a radio
 
 Paying ₹700–850 per clock for kilometres of range inside a building where 40 m
 would do is how a 40-clock campus acquires ₹30,000 of unnecessary radio. But a
 gatehouse, a sports field or an unwired block genuinely needs it.
 
-So: **one dial board design, two populations.**
+So, on top of the hardware split in §2b:
 
-- Every dial has an ESP32 and therefore ESP-NOW for free.
-- Every dial board carries a **footprint and a 6-pin header for an SX1262
-  module**, populated only where the site survey demands it.
 - A keeper is cheap enough (see [`../hardware/BOM.md`](../hardware/BOM.md)) that
   **one keeper per building**, each independently synced to the same upstream
   time, is usually better than one campus keeper straining to reach everything.

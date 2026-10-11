@@ -1,0 +1,16 @@
+# Cloudflare Pages headers for the boreth marketing site.
+
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=()
+
+/*.html
+  Cache-Control: public, max-age=3600
+
+# Asset filenames here are NOT content-hashed, so a long immutable cache would
+# pin stale files at the edge and in browsers. Short max-age + revalidation
+# instead: the ETag makes the recheck a 304 with no body.
+/assets/*
+  Cache-Control: public, max-age=300, must-revalidate

@@ -1,0 +1,223 @@
+/* ==========================================================================
+   boreth — spoke stylesheet
+   Loads after kit/tokens.css + kit/base.css, so token overrides and bespoke
+   rules win. The kit owns .sl-wrap, .sl-kicker, .sl-link, .sl-family,
+   .sl-footer; everything below is boreth's own layer.
+
+   DARK only, and RED: a seven-segment display is slanted red light on dark
+   glass, and the page is themed as the product rather than around it. Every
+   colour is defined once, on :root, with no media query to drift out of sync.
+   ========================================================================== */
+
+:root {
+  --sl-bg: #0b0909;
+  --sl-surface: #121010;
+  --sl-border: #231d1d;
+  --sl-text: #ece6e4;
+  --sl-text-dim: #9a8d8a;
+  --sl-text-mute: #6a5d5b;
+  --sl-accent: #ff2d16;
+  --sl-accent-2: #c8a44a;
+
+  --sl-font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --sl-font-body:    'Inter', system-ui, -apple-system, sans-serif;
+  --sl-font-mono:    'JetBrains Mono', ui-monospace, Menlo, monospace;
+
+  --sl-maxw: 1100px;
+
+  /* The display. */
+  --glass: #0a0606;
+  --glass-edge: #2a1f1d;
+  --seg-off: rgba(255, 45, 22, 0.085);
+  --seg-on: #ff3b22;
+  --glow: rgba(255, 45, 22, 0.55);
+  --slant: -8deg;              /* real clock displays lean. so does this one. */
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--sl-bg);
+  color: var(--sl-text);
+  font-family: var(--sl-font-body);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2 {
+  font-family: var(--sl-font-display);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.5em;
+}
+h1 { font-size: clamp(1.9rem, 4.4vw, 3.2rem); }
+h2 { font-size: clamp(1.4rem, 2.8vw, 2.1rem); }
+h1 em, h2 em { font-style: italic; color: var(--sl-text-dim); }
+
+/* ── Top bar ── */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  background: color-mix(in srgb, var(--sl-bg) 88%, transparent);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  border-bottom: 1px solid var(--sl-border);
+}
+.topbar-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; padding: 0.7rem 1.25rem;
+}
+.brand {
+  display: inline-flex; align-items: center; gap: 0.55rem;
+  font-family: var(--sl-font-mono); font-size: 1.02rem;
+  color: var(--sl-text); text-decoration: none;
+}
+.brand-mark {
+  width: 10px; height: 20px; transform: skewX(var(--slant));
+  background:
+    radial-gradient(circle at 50% 26%, var(--sl-accent) 0 2.6px, transparent 2.9px),
+    radial-gradient(circle at 50% 74%, var(--sl-accent) 0 2.6px, transparent 2.9px);
+}
+.status {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  font-family: var(--sl-font-mono); font-size: 0.74rem;
+  color: var(--sl-text-mute); text-transform: uppercase; letter-spacing: 0.08em;
+}
+.status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sl-accent); }
+@media (max-width: 560px) { .status-text { display: none; } }
+
+/* ── Sections ── */
+.hero { padding: clamp(2.2rem, 6vw, 4.5rem) 1.25rem clamp(1.6rem, 4vw, 3rem); }
+.band { padding: clamp(2.2rem, 5.5vw, 4rem) 1.25rem; border-top: 1px solid var(--sl-border); }
+.band.alt { background: var(--sl-surface); }
+.narrow { max-width: 680px; }
+.lede { font-size: clamp(1rem, 1.4vw, 1.14rem); max-width: 54ch; color: var(--sl-text-dim); }
+.lede strong { color: var(--sl-text); font-weight: 500; }
+
+/* ── The display ── */
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--glass-edge);
+  border-radius: 10px;
+  padding: clamp(0.9rem, 2.6vw, 1.8rem) clamp(0.8rem, 2.6vw, 2rem);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 18px 40px -28px #000;
+  overflow-x: auto;
+}
+.digits {
+  display: flex; align-items: center; justify-content: center;
+  gap: clamp(0.16rem, 0.7vw, 0.45rem);
+  min-width: min-content;
+  transform: skewX(var(--slant));
+}
+svg.digit { height: clamp(46px, 10vw, 96px); width: auto; display: block; }
+.seg { fill: var(--seg-off); transition: fill 90ms linear, filter 90ms linear; }
+.seg.on { fill: var(--seg-on); filter: drop-shadow(0 0 7px var(--glow)); }
+.colon {
+  display: inline-flex; flex-direction: column; justify-content: center;
+  gap: clamp(10px, 2.3vw, 24px);
+  margin: 0 clamp(0.08rem, 0.5vw, 0.4rem);
+}
+.colon i {
+  width: clamp(6px, 1.4vw, 13px); height: clamp(6px, 1.4vw, 13px);
+  background: var(--seg-off); transition: background 90ms linear, filter 90ms linear;
+}
+.colon.on i { background: var(--seg-on); filter: drop-shadow(0 0 7px var(--glow)); }
+.nojs { font-family: var(--sl-font-mono); color: var(--seg-on); font-size: 2rem; margin: 0; text-align: center; font-style: italic; }
+
+/* ── The system graphic: one keeper, every dial ── */
+.system { margin-top: 1.6rem; }
+.keeper-node {
+  position: relative; width: max-content; margin: 0 auto 0;
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--sl-border); border-radius: 8px;
+  background: var(--sl-bg);
+  font-family: var(--sl-font-mono); font-size: 0.74rem;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--sl-text-dim);
+  z-index: 2;
+}
+.keeper-node .sat { width: 7px; height: 7px; border-radius: 50%; background: var(--sl-accent); }
+/* Pulse rings leave the keeper once per cycle. */
+.keeper-node::before,
+.keeper-node::after {
+  content: ''; position: absolute; inset: -1px; border-radius: 9px;
+  border: 1px solid var(--sl-accent); opacity: 0;
+  animation: ping 4s ease-out infinite;
+  pointer-events: none;
+}
+.keeper-node::after { animation-delay: 0.6s; }
+@keyframes ping {
+  0%   { transform: scale(1);    opacity: 0.55; }
+  70%  { transform: scale(1.35); opacity: 0; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+.links { display: block; width: 100%; height: 56px; margin: -2px 0 -2px; }
+.links path { fill: none; stroke: var(--sl-border); stroke-width: 1; }
+.links .live {
+  stroke: var(--sl-accent); stroke-width: 1.5;
+  stroke-dasharray: 10 190; stroke-dashoffset: 200;
+  animation: travel 4s linear infinite;
+  opacity: 0.85;
+}
+@keyframes travel { to { stroke-dashoffset: 0; } }
+
+.wall { display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(0.8rem, 2.4vw, 2rem); }
+.mini { text-align: center; }
+.mini .glass { padding: 0.5rem 0.6rem; border-radius: 6px; }
+.mini svg.digit { height: clamp(20px, 3.2vw, 30px); }
+.mini .colon i { width: clamp(3px, 0.5vw, 5px); height: clamp(3px, 0.5vw, 5px); }
+.mini .colon { gap: clamp(4px, 0.8vw, 8px); }
+.mini figcaption {
+  margin-top: 0.5rem; font-family: var(--sl-font-mono);
+  font-size: 0.68rem; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--sl-text-mute);
+}
+.caption {
+  margin: 1.4rem auto 0; text-align: center; max-width: 46ch;
+  font-size: 0.95rem; color: var(--sl-text-dim);
+}
+
+/* ── Facts strip ── */
+.facts {
+  display: grid; gap: 1px; margin-top: 1.4rem;
+  grid-template-columns: repeat(2, 1fr);
+  background: var(--sl-border); border: 1px solid var(--sl-border); border-radius: 10px;
+  overflow: hidden;
+}
+@media (min-width: 760px) { .facts { grid-template-columns: repeat(4, 1fr); } }
+.facts div { background: var(--sl-bg); padding: 1.1rem 1rem; }
+.band.alt .facts div { background: var(--sl-surface); }
+.facts b {
+  display: block; font-family: var(--sl-font-mono); font-weight: 500;
+  font-size: clamp(1.05rem, 2vw, 1.35rem); color: var(--sl-accent);
+  font-style: italic; letter-spacing: -0.01em;
+}
+.facts span {
+  display: block; margin-top: 0.3rem;
+  font-size: 0.85rem; color: var(--sl-text-dim); line-height: 1.45;
+}
+
+/* ── Short list ── */
+.holds { list-style: none; padding: 0; margin: 1.3rem 0 0; display: grid; gap: 0.7rem; }
+@media (min-width: 720px) { .holds { grid-template-columns: repeat(3, 1fr); gap: 1.4rem; } }
+.holds li { color: var(--sl-text-dim); font-size: 0.97rem; }
+.holds b {
+  display: block; font-family: var(--sl-font-mono); font-weight: 400;
+  font-size: 0.78rem; letter-spacing: 0.04em; color: var(--sl-accent);
+  margin-bottom: 0.25rem;
+}
+
+/* ── Kit overrides ── */
+.sl-family h2 { font-family: var(--sl-font-display); }
+.sl-footer { border-top: 1px solid var(--sl-border); }
+
+@media (prefers-reduced-motion: reduce) {
+  .seg, .colon i { transition: none; }
+  .keeper-node::before, .keeper-node::after, .links .live { animation: none; }
+  .links .live { stroke-dasharray: none; stroke-dashoffset: 0; opacity: 0.5; }
+}

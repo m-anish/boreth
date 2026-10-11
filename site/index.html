@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>boreth — monks have kept the hour for centuries</title>
+  <meta name="description" content="Synchronised clocks for campuses. Every dial agrees with every other dial, and one keeper knows what time it actually is. A starstucklab project." />
+  <meta property="og:title" content="boreth" />
+  <meta property="og:description" content="Monks have kept the hour for centuries. They would rather not be asked. Synchronised clocks for campuses — every dial agrees with every other dial, and one keeper knows what time it actually is." />
+  <!-- TODO: og:image — needs a rendered hero or card image; the hub card tooling
+       falls back to assets/mark.svg until one exists. -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://boreth.starstucklab.com" />
+  <meta name="theme-color" content="#0b0909" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/kit/tokens.css" />
+  <link rel="stylesheet" href="assets/kit/base.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/svg+xml" href="assets/mark.svg" />
+</head>
+<body>
+
+<!-- ============ TOP BAR ============ -->
+<header class="topbar">
+  <div class="topbar-inner sl-wrap">
+    <a href="#" class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      boreth
+    </a>
+    <span class="status">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="status-text">Dial 000 · Keeping vigil</span>
+    </span>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="sl-wrap">
+    <span class="sl-kicker">Synchronised clocks · campuses</span>
+
+    <!-- Segments are drawn, not typed, so the unlit ones stay faintly visible
+         the way they do on real glass. -->
+    <div class="glass" role="img" aria-label="A seven-segment clock showing the current time">
+      <div class="digits" data-clock aria-hidden="true"></div>
+      <noscript><p class="nojs">12:00:00</p></noscript>
+    </div>
+
+    <h1 style="margin-top:1.6rem">Monks have kept the hour for centuries.<br><em>They would rather not be asked.</em></h1>
+  </div>
+</section>
+
+<!-- ============ THE SYSTEM, DRAWN ============ -->
+<section class="band alt">
+  <div class="sl-wrap">
+    <span class="sl-kicker">One keeper. Every dial.</span>
+
+    <div class="system">
+      <div class="keeper-node">
+        <span class="sat" aria-hidden="true"></span>
+        keeper
+      </div>
+
+      <!-- Paths are drawn from the dials' measured positions, so the branches
+           land on them at any width. See drawLinks() below. -->
+      <svg class="links" id="links" viewBox="0 0 600 56" aria-hidden="true"></svg>
+
+      <div class="wall">
+        <figure class="mini">
+          <div class="glass"><div class="digits" data-clock aria-hidden="true"></div></div>
+          <figcaption>Library · 2.3″</figcaption>
+        </figure>
+        <figure class="mini">
+          <div class="glass"><div class="digits" data-clock aria-hidden="true"></div></div>
+          <figcaption>Exam hall · 4″</figcaption>
+        </figure>
+        <figure class="mini">
+          <div class="glass"><div class="digits" data-clock aria-hidden="true"></div></div>
+          <figcaption>Gate · 2.3″</figcaption>
+        </figure>
+      </div>
+
+      <p class="caption">
+        Every dial holds its own oscillator, so it keeps the hour alone — through
+        the power cut, the dead router, and the keeper itself.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FACTS ============ -->
+<section class="band">
+  <div class="sl-wrap">
+    <div class="facts">
+      <div><b>HH:MM:SS</b><span>Six digits at 2.3″ or 4″</span></div>
+      <div><b>±25 ms</b><span>Between any two dials</span></div>
+      <div><b>865–867</b><span>MHz, licence-exempt in India</span></div>
+      <div><b>1 s / week</b><span>Drift with nothing listening</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WHAT HOLDS ============ -->
+<section class="band alt">
+  <div class="sl-wrap narrow">
+    <h2>A clock estate's real failure is not inaccuracy.<br><em>It is nobody noticing.</em></h2>
+    <ul class="holds">
+      <li><b>power cut</b>The display goes dark. The clock does not stop, and is right the moment the lights return.</li>
+      <li><b>network down</b>The keeper runs on its own oscillator and marks every beacon as degraded.</li>
+      <li><b>keeper gone</b>Every dial keeps vigil on a rate it was taught. A week of silence costs a second.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ STATUS ============ -->
+<section class="band">
+  <div class="sl-wrap narrow">
+    <span class="sl-kicker">Where this stands</span>
+    <h2>Dial 000.</h2>
+    <p class="lede">
+      No dials on any wall yet — a researched design, a costed bill of materials,
+      and an accuracy budget that says what <strong>in sync</strong> has to mean
+      before anyone solders anything.
+    </p>
+    <p style="margin-top:1.1rem"><a class="sl-link" href="https://github.com/m-anish/boreth">The build, in full ↗</a></p>
+  </div>
+</section>
+
+<!-- ============ FAMILY (canonical kit partial) ============ -->
+<section class="band alt">
+  <div class="sl-wrap">
+    <div class="sl-family">
+      <span class="sl-kicker">Family</span>
+      <h2>Part of <a class="sl-link" href="https://starstucklab.com">starstucklab</a>.</h2>
+      <p>A small ecosystem of personal engineering instruments, each built to solve one specific problem and then, ideally, stop demanding attention.</p>
+      <p>Where science met poetry, had a brief fling with engineering, and now raises mildly disillusioned but talented offspring.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER (canonical kit partial) ============ -->
+<footer class="sl-footer">
+  <div class="sl-wrap">
+    <div class="sl-footer-cols">
+      <div>
+        <h4>The build</h4>
+        <p>Schematics, firmware, BOM, wiring:<br><a href="https://github.com/m-anish/boreth">github&nbsp;↗</a></p>
+      </div>
+      <div>
+        <h4>The family</h4>
+        <p><a href="https://starstucklab.com">starstucklab&nbsp;↗</a><br>Other small machines.</p>
+      </div>
+    </div>
+    <div class="sl-support">
+      <span class="sl-support-note">Keep the lab caffeinated:</span>
+      <a href="https://buymeachai.ezee.li/anishmg" target="_blank" rel="noopener">☕ Buy me a chai</a>
+      <a href="https://ko-fi.com/P5P7BMO10" target="_blank" rel="noopener">♥ Ko-fi</a>
+    </div>
+    <div class="sl-signoff">
+      <span>A starstucklab project</span>
+      <span>Building small machines for an indifferent universe.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ---------------------------------------------------------------------------
+   Every [data-clock] on the page is the same clock, painted from one timer —
+   which is the entire product argument, made literally. Seven polygons per
+   digit, so unlit segments stay faintly visible the way real glass does.
+   --------------------------------------------------------------------------- */
+(function () {
+  /* Hexagonal segments on a 100 × 180 grid, thickness 16. Shared corners,
+     which is what gives a real display its stitched look. The lean comes from
+     a CSS skew on the row, not from the geometry. */
+  var SEG = {
+    a: '8,0 92,0 100,8 92,16 8,16 0,8',
+    b: '84,8 92,0 100,8 100,90 92,98 84,90',
+    c: '84,90 92,82 100,90 100,172 92,180 84,172',
+    d: '8,164 92,164 100,172 92,180 8,180 0,172',
+    e: '0,90 8,82 16,90 16,172 8,180 0,172',
+    f: '0,8 8,0 16,8 16,90 8,98 0,90',
+    g: '8,82 92,82 100,90 92,98 8,98 0,90'
+  };
+  var MAP = {
+    '0': 'abcdef', '1': 'bc',     '2': 'abdeg',  '3': 'abcdg',   '4': 'bcfg',
+    '5': 'acdfg',  '6': 'acdefg', '7': 'abc',    '8': 'abcdefg', '9': 'abcdfg'
+  };
+  var ORDER = 'abcdefg'.split('');
+
+  function digitSvg() {
+    var s = '<svg class="digit" viewBox="-4 -4 108 188" aria-hidden="true">';
+    ORDER.forEach(function (k) {
+      s += '<polygon class="seg seg-' + k + '" points="' + SEG[k] + '"/>';
+    });
+    return s + '</svg>';
+  }
+
+  var faces = [].slice.call(document.querySelectorAll('[data-clock]'));
+  if (!faces.length) return;
+
+  faces.forEach(function (el) {
+    var html = '';
+    for (var p = 0; p < 3; p++) {
+      html += digitSvg() + digitSvg();
+      if (p < 2) html += '<span class="colon" aria-hidden="true"><i></i><i></i></span>';
+    }
+    el.innerHTML = html;
+    el._svgs = el.querySelectorAll('svg.digit');
+    el._colons = el.querySelectorAll('.colon');
+  });
+
+  function paint(svg, ch) {
+    var lit = MAP[ch] || '';
+    ORDER.forEach(function (k) {
+      svg.querySelector('.seg-' + k).classList.toggle('on', lit.indexOf(k) !== -1);
+    });
+  }
+
+  function tick() {
+    var d = new Date();
+    var t = [d.getHours(), d.getMinutes(), d.getSeconds()]
+      .map(function (n) { return n < 10 ? '0' + n : '' + n; })
+      .join('');
+    var lit = d.getMilliseconds() < 500;
+    faces.forEach(function (el) {
+      for (var i = 0; i < el._svgs.length; i++) paint(el._svgs[i], t.charAt(i));
+      for (var j = 0; j < el._colons.length; j++) el._colons[j].classList.toggle('on', lit);
+    });
+  }
+
+  tick();
+  setInterval(tick, 100);
+
+  /* The connectors: keeper down, out, and into each dial. Measured rather than
+     hardcoded, because the dials move with the viewport. */
+  var links = document.getElementById('links');
+  var system = document.querySelector('.system');
+  var keeper = document.querySelector('.keeper-node');
+
+  function drawLinks() {
+    if (!links || !system || !keeper) return;
+    var base = system.getBoundingClientRect();
+    var w = Math.round(base.width);
+    var kb = keeper.getBoundingClientRect();
+    var kx = Math.round(kb.left + kb.width / 2 - base.left);
+    var d = [].slice.call(document.querySelectorAll('.mini')).map(function (m) {
+      var r = m.getBoundingClientRect();
+      return Math.round(r.left + r.width / 2 - base.left);
+    }).map(function (cx) {
+      return cx === kx ? 'M' + kx + ' 0 V56'
+                       : 'M' + kx + ' 0 V18 H' + cx + ' V56';
+    });
+    links.setAttribute('viewBox', '0 0 ' + w + ' 56');
+    links.innerHTML =
+      d.map(function (p) { return '<path d="' + p + '"/>'; }).join('') +
+      d.map(function (p) { return '<path class="live" pathLength="200" d="' + p + '"/>'; }).join('');
+  }
+
+  drawLinks();
+  addEventListener('resize', drawLinks);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawLinks);
+})();
+</script>
+
+</body>
+</html>
